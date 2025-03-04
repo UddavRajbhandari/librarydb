@@ -1,6 +1,6 @@
 BookID,Title,Author,Genre,PublishedYear,Category,Quantity
-1,Tonight much.,Scott Smith,Fiction,1981,Education,5
-2,Right parent.,Joshua Singleton,Non-Fiction,1904,Fiction,2
+1,Tonight much.,Scott Smith,Fiction,1981,Education,8
+2,Right parent.,Joshua Singleton,Non-Fiction,1904,Fiction,3
 3,Never exactly study same.,Brenda Roberts,Biography,1987,Education,4
 4,Meet check conference.,Janice Smith,Fiction,1927,Fiction,5
 5,Politics sense.,Monica Potts,Politics,2017,Fiction,8
@@ -114,3 +114,5 @@ BookID,Title,Author,Genre,PublishedYear,Category,Quantity
 113,Factor test.,Peter Reed,Fiction,2007,Education,4
 114,Total piece.,William Bell,Technology,1993,Fiction,3
 115,Larger country.,Nancy Brooks,Fiction,2001,Business,7
+117,dbms,rakesh shah,technology,2004,sky cooperation,4
+118,One piece,oda,anime,1987,fiction,4

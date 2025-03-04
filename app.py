@@ -31,7 +31,8 @@ def login():
             }
             st.success("Logged in successfully!")
             # Force a refresh by updating a dummy session state variable
-            st.session_state["refresh"] = not st.session_state.get("refresh", False)
+            # st.session_state["refresh"] = not st.session_state.get("refresh", False)
+            st.rerun()
         else:
             st.error("Invalid username or password.")
 
@@ -41,7 +42,8 @@ def logout():
         del st.session_state["user"]
         st.success("Logged out successfully!")
         # Force a refresh by updating a dummy session state variable
-        st.session_state["refresh"] = not st.session_state.get("refresh", False)
+        # st.session_state["refresh"] = not st.session_state.get("refresh", False)
+        st.rerun()
 
 # Add New Book (Admin and Librarian only)
 def add_book():
@@ -113,39 +115,115 @@ def delete_book():
     else:
         st.error("You do not have permission to perform this action.")
 
-# Export Books Data to CSV (Admin and Librarian only)
 def export_to_csv():
-    if st.session_state["user"]["Role"] in ["Admin", "Librarian"]:
-        st.title("Export Books to CSV")
-        conn = create_connection()
-        query = "SELECT * FROM Books"
-        df = pd.read_sql(query, conn)
-        conn.close()
+    st.title("Export Data to CSV")
+    conn = create_connection()
 
-        save_folder = os.path.join(os.getcwd(), 'data')
-        if not os.path.exists(save_folder):
-            os.makedirs(save_folder)
+    # Export Books
+    if st.button("Export Books"):
+        try:
+            query = "SELECT * FROM Books"
+            df = pd.read_sql(query, conn)
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="Download Books CSV",
+                data=csv,
+                file_name="books_data.csv",
+                mime="text/csv"
+            )
+        except Exception as e:
+            st.error(f"Error exporting Books: {e}")
 
-        save_path = os.path.join(save_folder, 'books_data.csv')
-        df.to_csv(save_path, index=False)
-        st.success(f"Data exported successfully to {save_path}")
+    # Export Members
+    if st.button("Export Members"):
+        try:
+            query = "SELECT * FROM Members"
+            df = pd.read_sql(query, conn)
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="Download Members CSV",
+                data=csv,
+                file_name="members_data.csv",
+                mime="text/csv"
+            )
+        except Exception as e:
+            st.error(f"Error exporting Members: {e}")
 
-        buffer = io.StringIO()
-        df.to_csv(buffer, index=False)
-        buffer.seek(0)
-        csv_data = buffer.getvalue().encode("utf-8")
+    # Export Transactions
+    if st.button("Export Transactions"):
+        try:
+            query = "SELECT * FROM Transactions"
+            df = pd.read_sql(query, conn)
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="Download Transactions CSV",
+                data=csv,
+                file_name="transactions_data.csv",
+                mime="text/csv"
+            )
+        except Exception as e:
+            st.error(f"Error exporting Transactions: {e}")
 
-        st.download_button(
-            label="Download CSV",
-            data=csv_data,
-            file_name="books_data.csv",
-            mime="text/csv"
-        )
+    # Export Users
+    if st.button("Export Users"):
+        try:
+            query = "SELECT * FROM Users"
+            df = pd.read_sql(query, conn)
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="Download Users CSV",
+                data=csv,
+                file_name="users_data.csv",
+                mime="text/csv"
+            )
+        except Exception as e:
+            st.error(f"Error exporting Users: {e}")
+
+    conn.close()
+def borrow_book():
+    if st.session_state["user"]["Role"] == "Member":
+        st.title("Borrow a Book")
+        member_id = st.session_state["user"]["UserID"]
+        book_id = st.number_input("Book ID", min_value=1)
+        due_date = st.date_input("Due Date")
+
+        if st.button("Borrow Book"):
+            conn = create_connection()
+            cursor = conn.cursor()
+
+            try:
+                # Check if the book exists
+                cursor.execute("SELECT Quantity FROM Books WHERE BookID = ?", (book_id,))
+                result = cursor.fetchone()
+
+                if result is None:
+                    st.error("Book not found.")
+                else:
+                    quantity = result[0]
+
+                    if quantity > 0:
+                        # Insert transaction
+                        query = "INSERT INTO Transactions (MemberID, BookID, DueDate, Status) VALUES (?, ?, ?, 'Issued')"
+                        cursor.execute(query, (member_id, book_id, due_date))
+
+                        # Update book quantity
+                        cursor.execute("UPDATE Books SET Quantity = Quantity - 1 WHERE BookID = ?", (book_id,))
+                        conn.commit()
+                        st.success("Book borrowed successfully!")
+                    else:
+                        st.error("This book is not available.")
+            except Exception as e:
+                st.error(f"Error borrowing book: {e}")
+            finally:
+                conn.close()
     else:
         st.error("You do not have permission to perform this action.")
 
+
+    
 # Issue a Book (Admin and Librarian only)
 def issue_book():
+ 
     if st.session_state["user"]["Role"] in ["Admin", "Librarian"]:
         st.title("Issue a Book")
         member_id = st.number_input("Member ID", min_value=1)
@@ -179,22 +257,56 @@ def view_transactions():
     else:
         st.error("You do not have permission to perform this action.")
 
-# Return a Book (Admin and Librarian only)
 def return_book():
-    if st.session_state["user"]["Role"] in ["Admin", "Librarian"]:
-        st.title("Return a Book")
-        transaction_id = st.number_input("Transaction ID", min_value=1)
+    user_role = st.session_state["user"]["Role"]
+    st.title("Return a Book")
+    transaction_id = st.number_input("Transaction ID", min_value=1)
 
-        if st.button("Return Book"):
-            conn = create_connection()
-            cursor = conn.cursor()
-            query = "UPDATE Transactions SET ReturnDate = DATE('now'), Status = 'Returned' WHERE TransactionID = ?"
-            cursor.execute(query, (transaction_id,))
-            conn.commit()
-            conn.close()
-            st.success("Book returned successfully!")
-    else:
-        st.error("You do not have permission to perform this action.")
+    if st.button("Return Book"):
+        conn = create_connection()
+        cursor = conn.cursor()
+
+        if user_role == "Member":
+            member_id = st.session_state["user"]["UserID"]
+
+            # Check if the transaction belongs to the member
+            cursor.execute("SELECT BookID FROM Transactions WHERE TransactionID = ? AND MemberID = ?", 
+                           (transaction_id, member_id))
+            result = cursor.fetchone()
+
+            if not result:
+                st.error("Invalid Transaction ID or you do not have permission to return this book.")
+                conn.close()
+                return
+
+            book_id = result[0]
+
+        elif user_role in ["Admin", "Librarian"]:
+            # Fetch BookID for the given TransactionID
+            cursor.execute("SELECT BookID FROM Transactions WHERE TransactionID = ?", (transaction_id,))
+            result = cursor.fetchone()
+
+            if not result:
+                st.error("Invalid Transaction ID.")
+                conn.close()
+                return
+
+            book_id = result[0]
+
+        else:
+            st.error("You do not have permission to perform this action.")
+            return
+
+        # Update transaction status
+        cursor.execute("UPDATE Transactions SET ReturnDate = DATE('now'), Status = 'Returned' WHERE TransactionID = ?", 
+                       (transaction_id,))
+
+        # Update book quantity
+        cursor.execute("UPDATE Books SET Quantity = Quantity + 1 WHERE BookID = ?", (book_id,))
+        conn.commit()
+        conn.close()
+        st.success("Book returned successfully!")
+
 
 # Add New User (Admin only)
 def add_user():
@@ -238,47 +350,75 @@ def main():
     if "user" not in st.session_state:
         login()
     else:
-        st.sidebar.write(f"Logged in as: {st.session_state['user']['Username']} ({st.session_state['user']['Role']})")
-        if st.sidebar.button("Logout"):
-            logout()
+        with st.sidebar.expander("👤 Profile", expanded=False):
+            st.write(f"*Username:* {st.session_state['user']['Username']}")
+            st.write(f"*Role:* {st.session_state['user']['Role']}")
+            if st.button("Logout", key="logout_button"):
+                logout()
 
-        if "user" in st.session_state:  # Check if user is still logged in
-            if st.session_state["user"]["Role"] == "Admin":
-                option = st.sidebar.selectbox("Choose Operation", (
-                    "Add Book", "View Books", "Update Book", "Delete Book", "Export to CSV",
-                    "Issue Book", "View Transactions", "Return Book",
-                    "Add User", "View Users"
-                ))
-            elif st.session_state["user"]["Role"] == "Librarian":
-                option = st.sidebar.selectbox("Choose Operation", (
-                    "Add Book", "View Books", "Update Book", "Export to CSV",
-                    "Issue Book", "View Transactions", "Return Book"
-                ))
-            elif st.session_state["user"]["Role"] == "Member":
-                option = st.sidebar.selectbox("Choose Operation", (
-                    "View Books"
-                ))
+        menu_options = {
+            "Admin": [
+                "Add Book", "View Books", "Update Book", "Delete Book", "Export to CSV",
+                "Issue Book", "View Transactions", "Return Book",
+                "Add User", "View Users"
+            ],
+            "Librarian": [
+                "Add Book", "View Books", "Update Book", "Export to CSV",
+                "Issue Book", "View Transactions", "Return Book"
+            ],
+            "Member": [
+                "View Books", "Borrow Book", "Return Book"
+            ]
+        }
 
-            if option == "Add Book":
-                add_book()
-            elif option == "View Books":
-                view_books()
-            elif option == "Update Book":
-                update_book()
-            elif option == "Delete Book":
-                delete_book()
-            elif option == "Export to CSV":
-                export_to_csv()
-            elif option == "Issue Book":
-                issue_book()
-            elif option == "View Transactions":
-                view_transactions()
-            elif option == "Return Book":
-                return_book()
-            elif option == "Add User":
-                add_user()
-            elif option == "View Users":
-                view_users()
+        role = st.session_state["user"]["Role"]
+        option = st.sidebar.selectbox(
+            "📌 Choose an Operation:", 
+            menu_options[role], 
+            index=0,  # Sets default selection to the first item
+            placeholder="Select an option"  # Ensures no typing
+        )
+
+        # Custom CSS to remove blinking cursor and enforce pointer cursor
+        st.markdown(
+            """
+            <style>
+                /* Remove blinking cursor inside the selectbox */
+                div[data-baseweb="select"] input {
+                    caret-color: transparent !important;
+                }
+
+                /* Change cursor to pointer when hovering over the selectbox */
+                div[data-baseweb="select"] > div { 
+                    cursor: pointer !important; 
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        if option == "Add Book":
+            add_book()
+        elif option == "View Books":
+            view_books()
+        elif option == "Update Book":
+            update_book()
+        elif option == "Delete Book":
+            delete_book()
+        elif option == "Export to CSV":
+            export_to_csv()
+        elif option == "Issue Book":
+            issue_book()
+        elif option == "View Transactions":
+            view_transactions()
+        elif option == "Return Book":
+            return_book()
+        elif option == "Add User":
+            add_user()
+        elif option == "View Users":
+            view_users()
+        elif option == "Borrow Book":
+            borrow_book()
 
 # Run the app
 if __name__ == "__main__":
