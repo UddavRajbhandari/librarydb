@@ -1,8 +1,9 @@
--- Drop existing tables if any (to reset the schema)
-DROP TABLE IF EXISTS Books;
-DROP TABLE IF EXISTS Members;
-DROP TABLE IF EXISTS Transactions;
-DROP TABLE IF EXISTS Users
+-- Create the database
+CREATE DATABASE LibraryDB;
+GO
+
+USE LibraryDB;
+GO
 
 -- Create the Books table
 CREATE TABLE Books (
@@ -31,7 +32,7 @@ CREATE TABLE Transactions (
     MemberID INT,
     BookID INT,
     IssueDate DATE DEFAULT GETDATE(),
-    DueDate DATE NOT NULL CHECK (DueDate >= IssueDate), -- Ensure DueDate is after IssueDate
+    DueDate DATE NOT NULL,
     ReturnDate DATE,
     Status NVARCHAR(50) DEFAULT 'Issued',
     CONSTRAINT FK_Transactions_Members FOREIGN KEY (MemberID) REFERENCES Members(MemberID),
@@ -45,6 +46,10 @@ CREATE TABLE Users (
     PasswordHash NVARCHAR(255) NOT NULL,
     Role NVARCHAR(50) CHECK (Role IN ('Admin', 'Librarian', 'Member'))
 );
+drop table Books
+drop table Members
+drop table Transactions
+drop table Users
 
 -- Insert 30 sample members into the Members table
 INSERT INTO Members (FullName, Email, Phone, Address, MembershipDate) VALUES
@@ -203,38 +208,38 @@ INSERT INTO Books (Title, Author, Genre, PublishedYear, Category, Quantity) VALU
 ('Economics analyze.', 'Sophia Robinson', 'Economics', 2012, 'Technology', 8);
 
 
+-- Insert 30 sample transactions into the Transactions table
 INSERT INTO Transactions (MemberID, BookID, IssueDate, DueDate, ReturnDate, Status) VALUES
-(1, 1, '2025-02-25', date('2025-02-25', '+14 days'), NULL, 'Issued'),
-(2, 2, '2025-02-26', date('2025-02-26', '+14 days'), NULL, 'Issued'),
-(3, 3, '2025-02-27', date('2025-02-27', '+14 days'), NULL, 'Issued'),
-(4, 4, '2025-02-28', date('2025-02-28', '+14 days'), '2025-03-10', 'Returned'),
-(5, 5, '2025-02-20', date('2025-02-20', '+14 days'), '2025-03-05', 'Returned'),
-(6, 6, '2025-02-21', date('2025-02-21', '+14 days'), NULL, 'Overdue'),
-(7, 7, '2025-02-22', date('2025-02-22', '+14 days'), NULL, 'Issued'),
-(8, 8, '2025-02-23', date('2025-02-23', '+14 days'), NULL, 'Issued'),
-(9, 9, '2025-02-24', date('2025-02-24', '+14 days'), NULL, 'Issued'),
-(10, 10, '2025-02-19', date('2025-02-19', '+14 days'), '2025-03-03', 'Returned'),
-(11, 11, '2025-02-20', date('2025-02-20', '+14 days'), NULL, 'Overdue'),
-(12, 12, '2025-02-21', date('2025-02-21', '+14 days'), NULL, 'Issued'),
-(13, 13, '2025-02-22', date('2025-02-22', '+14 days'), NULL, 'Issued'),
-(14, 14, '2025-02-23', date('2025-02-23', '+14 days'), '2025-03-08', 'Returned'),
-(15, 15, '2025-02-24', date('2025-02-24', '+14 days'), '2025-03-09', 'Returned'),
-(16, 16, '2025-02-19', date('2025-02-19', '+14 days'), NULL, 'Overdue'),
-(17, 17, '2025-02-20', date('2025-02-20', '+14 days'), '2025-03-04', 'Returned'),
-(18, 18, '2025-02-21', date('2025-02-21', '+14 days'), '2025-03-06', 'Returned'),
-(19, 19, '2025-02-22', date('2025-02-22', '+14 days'), '2025-03-07', 'Returned'),
-(20, 20, '2025-02-23', date('2025-02-23', '+14 days'), NULL, 'Issued'),
-(21, 21, '2025-02-24', date('2025-02-24', '+14 days'), NULL, 'Issued'),
-(22, 22, '2025-02-19', date('2025-02-19', '+14 days'), NULL, 'Overdue'),
-(23, 23, '2025-02-20', date('2025-02-20', '+14 days'), NULL, 'Issued'),
-(24, 24, '2025-02-21', date('2025-02-21', '+14 days'), NULL, 'Issued'),
-(25, 25, '2025-02-22', date('2025-02-22', '+14 days'), NULL, 'Issued'),
-(26, 26, '2025-02-23', date('2025-02-23', '+14 days'), NULL, 'Issued'),
-(27, 27, '2025-02-24', date('2025-02-24', '+14 days'), NULL, 'Issued'),
-(28, 28, '2025-02-19', date('2025-02-19', '+14 days'), '2025-03-04', 'Returned'),
-(29, 29, '2025-02-20', date('2025-02-20', '+14 days'), NULL, 'Reserved'),
-(30, 30, '2025-02-21', date('2025-02-21', '+14 days'), '2025-03-06', 'Returned');
-
+(1, 1, '2025-02-25', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(2, 2, '2025-02-26', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(3, 3, '2025-02-27', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(4, 4, '2025-02-28', DATEADD(DAY, 14, GETDATE()), '2025-03-10', 'Returned'),
+(5, 5, '2025-02-20', DATEADD(DAY, 14, GETDATE()), '2025-03-05', 'Returned'),
+(6, 6, '2025-02-21', DATEADD(DAY, 14, GETDATE()), NULL, 'Overdue'),
+(7, 7, '2025-02-22', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(8, 8, '2025-02-23', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(9, 9, '2025-02-24', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(10, 10, '2025-02-19', DATEADD(DAY, 14, GETDATE()), '2025-03-03', 'Returned'),
+(11, 11, '2025-02-20', DATEADD(DAY, 14, GETDATE()), NULL, 'Overdue'),
+(12, 12, '2025-02-21', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(13, 13, '2025-02-22', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(14, 14, '2025-02-23', DATEADD(DAY, 14, GETDATE()), '2025-03-08', 'Returned'),
+(15, 15, '2025-02-24', DATEADD(DAY, 14, GETDATE()), '2025-03-09', 'Returned'),
+(16, 16, '2025-02-19', DATEADD(DAY, 14, GETDATE()), NULL, 'Overdue'),
+(17, 17, '2025-02-20', DATEADD(DAY, 14, GETDATE()), '2025-03-04', 'Returned'),
+(18, 18, '2025-02-21', DATEADD(DAY, 14, GETDATE()), '2025-03-06', 'Returned'),
+(19, 19, '2025-02-22', DATEADD(DAY, 14, GETDATE()), '2025-03-07', 'Returned'),
+(20, 20, '2025-02-23', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(21, 21, '2025-02-24', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(22, 22, '2025-02-19', DATEADD(DAY, 14, GETDATE()), NULL, 'Overdue'),
+(23, 23, '2025-02-20', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(24, 24, '2025-02-21', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(25, 25, '2025-02-22', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(26, 26, '2025-02-23', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(27, 27, '2025-02-24', DATEADD(DAY, 14, GETDATE()), NULL, 'Issued'),
+(28, 28, '2025-02-19', DATEADD(DAY, 14, GETDATE()), '2025-03-04', 'Returned'),
+(29, 29, '2025-02-20', DATEADD(DAY, 14, GETDATE()), NULL, 'Reserved'),
+(30, 30, '2025-02-21', DATEADD(DAY, 14, GETDATE()), '2025-03-06', 'Returned');
 
 
 
@@ -262,5 +267,9 @@ INSERT INTO Users (Username, PasswordHash, Role) VALUES
 ('Sarah King', 'password19', 'Member'),
 ('admin1', 'adminpass', 'Admin');
 
+select * from books;
+select * from members;
+select * from users;
 
-SELECT * FROM Books;
+-- Query to check all transactions
+SELECT * FROM Transactions;
