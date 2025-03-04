@@ -8,7 +8,7 @@ def create_connection():
     # Replace with your MSSQL server credentials
     server = 'DESKTOP-58K32MS'  # e.g., 'localhost' or 'your_server_ip'
     database = 'LibraryDB'  # Your database name
-    connection_string = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};Trusted_Connection=yes;'
+    connection_string = f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};Trusted_Connection=yes;"
     
     try:
         conn = pyodbc.connect(connection_string)
@@ -59,19 +59,31 @@ def add_book():
         category = st.text_input("Category")
         genre = st.text_input("Genre")
         year = st.number_input("Published Year", min_value=1000, max_value=9999)
-        quantity = st.number_input("Quantity", min_value=1)
+        quantity = st.number_input("Quantity", min_value=0)
 
         if st.button("Add Book"):
-            conn = create_connection()
-            if conn:
-                cursor = conn.cursor()
-                query = "INSERT INTO Books (Title, Author, Genre, PublishedYear, Category, Quantity) VALUES (?, ?, ?, ?, ?, ?)"
-                cursor.execute(query, (title, author, genre, year, category, quantity))
-                conn.commit()
-                conn.close()
-                st.success("Book added successfully!")
-    else:
-        st.error("You do not have permission to perform this action.")
+            # Check if any field is empty
+            if not title or not author or not category or not genre:
+                st.error("All fields must be filled.")
+            elif quantity <= 0:
+                st.error("Quantity must be a positive number.")
+            else:
+                conn = create_connection()
+                if conn:
+                    cursor = conn.cursor()
+
+                    # Check if the book already exists
+                    cursor.execute("SELECT * FROM Books WHERE Title = ? AND Author = ?", (title, author))
+                    existing_book = cursor.fetchone()
+
+                    if existing_book:
+                        st.error("This book already exists in the database.")
+                    else:
+                        query = "INSERT INTO Books (Title, Author, Genre, PublishedYear, Category, Quantity) VALUES (?, ?, ?, ?, ?, ?)"
+                        cursor.execute(query, (title, author, genre, year, category, quantity))
+                        conn.commit()
+                        conn.close()
+                        st.success("Book added successfully!")
 
 # View All Books (All roles)
 def view_books():
@@ -91,16 +103,18 @@ def update_book():
         new_quantity = st.number_input("New Quantity", min_value=0)
 
         if st.button("Update Book Quantity"):
-            conn = create_connection()
-            if conn:
-                cursor = conn.cursor()
-                query = "UPDATE Books SET Quantity = ? WHERE BookID = ?"
-                cursor.execute(query, (new_quantity, book_id))
-                conn.commit()
-                conn.close()
-                st.success("Book quantity updated successfully!")
-    else:
-        st.error("You do not have permission to perform this action.")
+            # Ensure the quantity is non-negative
+            if new_quantity < 0:
+                st.error("Quantity cannot be negative.")
+            else:
+                conn = create_connection()
+                if conn:
+                    cursor = conn.cursor()
+                    query = "UPDATE Books SET Quantity = ? WHERE BookID = ?"
+                    cursor.execute(query, (new_quantity, book_id))
+                    conn.commit()
+                    conn.close()
+                    st.success("Book quantity updated successfully!")
 
 # Delete Book (Admin only)
 def delete_book():
@@ -228,6 +242,7 @@ def borrow_book():
     else:
         st.error("You do not have permission to perform this action.")
 
+
 # Return Books (Member only)
 def return_book():
     user_role = st.session_state["user"]["Role"]
@@ -289,16 +304,27 @@ def add_user():
         role = st.selectbox("Role", ["Admin", "Librarian", "Member"])
 
         if st.button("Add User"):
-            conn = create_connection()
-            if conn:
-                cursor = conn.cursor()
-                query = "INSERT INTO Users (Username, PasswordHash, Role) VALUES (?, ?, ?)"
-                cursor.execute(query, (username, password, role))
-                conn.commit()
-                conn.close()
-                st.success("User added successfully!")
-    else:
-        st.error("You do not have permission to perform this action.")
+            # Check if any field is empty
+            if not username or not password:
+                st.error("Username and Password cannot be empty.")
+            else:
+                conn = create_connection()
+                if conn:
+                    cursor = conn.cursor()
+
+                    # Check if the username already exists
+                    cursor.execute("SELECT * FROM Users WHERE Username = ?", (username,))
+                    existing_user = cursor.fetchone()
+
+                    if existing_user:
+                        st.error("Username already exists. Please choose a different username.")
+                    else:
+                        query = "INSERT INTO Users (Username, PasswordHash, Role) VALUES (?, ?, ?)"
+                        cursor.execute(query, (username, password, role))
+                        conn.commit()
+                        conn.close()
+                        st.success("User added successfully!")
+
 
 # View All Users (Admin only)
 def view_users():
@@ -312,7 +338,40 @@ def view_users():
             st.dataframe(df)
     else:
         st.error("You do not have permission to perform this action.")
+# View All Members (Admin only)
+def view_members():
+    if st.session_state["user"]["Role"] == "Admin":
+        st.title("View Members")
+        conn = create_connection()
+        if conn:
+            query = "SELECT * FROM Members"
+            df = pd.read_sql(query, conn)
+            conn.close()
+            st.dataframe(df)
+    else:
+        st.error("You do not have permission to perform this action.")
 
+# Add New Member (Admin only)
+def add_member():
+    if st.session_state["user"]["Role"] == "Admin":
+        st.title("Add New Member")
+        full_name = st.text_input("Full Name")
+        email = st.text_input("Email")
+        phone = st.text_input("Phone")
+        address = st.text_input("Address")
+
+        if st.button("Add Member"):
+            conn = create_connection()
+            if conn:
+                cursor = conn.cursor()
+                query = "INSERT INTO Members (FullName, Email, Phone, Address) VALUES (?, ?, ?, ?)"
+                cursor.execute(query, (full_name, email, phone, address))
+                conn.commit()
+                conn.close()
+                st.success("Member added successfully!")
+    else:
+        st.error("You do not have permission to perform this action.")
+        
 # Issue a Book (Admin and Librarian only)
 def issue_book():
     if st.session_state["user"]["Role"] in ["Admin", "Librarian"]:
@@ -363,7 +422,7 @@ def main():
             "Admin": [
                 "Add Book", "View Books", "Update Book", "Delete Book", "Export to CSV",
                 "Issue Book", "View Transactions", "Return Book",
-                "Add User", "View Users"
+                "Add User", "View Users", "Add Member", "View Members"
             ],
             "Librarian": [
                 "Add Book", "View Books", "Update Book", "Export to CSV",
@@ -380,6 +439,23 @@ def main():
             menu_options[role], 
             index=0,  # Sets default selection to the first item
             placeholder="Select an option"  # Ensures no typing
+        )
+
+        st.markdown(
+            """
+            <style>
+                /* Remove blinking cursor inside the selectbox */
+                div[data-baseweb="select"] input {
+                    caret-color: transparent !important;
+                }
+
+                /* Change cursor to pointer when hovering over the selectbox */
+                div[data-baseweb="select"] > div { 
+                    cursor: pointer !important; 
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
         )
 
         if option == "Add Book":
@@ -404,6 +480,10 @@ def main():
             view_users()
         elif option == "Borrow Book":
             borrow_book()
+        elif option == "Add Member":  # New option
+            add_member()
+        elif option == "View Members":  # New option
+            view_members()
 
 # Run the app
 if __name__ == "__main__":
