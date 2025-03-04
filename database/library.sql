@@ -263,3 +263,4 @@ INSERT INTO Users (Username, PasswordHash, Role) VALUES
 ('admin1', 'adminpass', 'Admin');
 
 
+SELECT * FROM Books;
