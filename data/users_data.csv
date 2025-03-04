@@ -19,5 +19,5 @@ UserID,Username,PasswordHash,Role
 18,Rita Young,password18,Member
 19,Sarah King,password19,Member
 20,admin1,adminpass,Admin
-21,user1,password,Member
-22,lib,libpass,Librarian
+21,lib,libpass,Librarian
+22,user1,password,Member
