@@ -85,6 +85,61 @@ def add_book():
                         conn.close()
                         st.success("Book added successfully!")
 
+# Add Transaction (Librarian only)
+
+def add_transaction():
+    if st.session_state["user"]["Role"] == "Librarian":
+        st.title("Add Transaction")
+        
+        # Input fields
+        member_id = st.number_input("Member ID", min_value=1)
+        book_id = st.number_input("Book ID", min_value=1)
+        due_date = st.date_input("Due Date")
+        
+        # Status selection dropdown
+        status_options = ["Issued", "Returned", "Reserved"]  # Add more options if needed
+        status = st.selectbox("Status", status_options, index=0)  # Default to "Issued"
+        
+        if st.button("Add Transaction"):
+            conn = create_connection()
+            if conn:
+                cursor = conn.cursor()
+                
+                try:
+                    # Check if the member and book exist
+                    cursor.execute("SELECT MemberID FROM Members WHERE MemberID = ?", (member_id,))
+                    member_exists = cursor.fetchone()
+                    
+                    cursor.execute("SELECT BookID, Quantity FROM Books WHERE BookID = ?", (book_id,))
+                    book_exists = cursor.fetchone()
+                    
+                    if not member_exists:
+                        st.error("Member ID does not exist.")
+                    elif not book_exists:
+                        st.error("Book ID does not exist.")
+                    elif book_exists.Quantity <= 0 and status == "Issued":
+                        st.error("This book is not available for issuing.")
+                    else:
+                        # Insert the transaction
+                        query = """
+                        INSERT INTO Transactions (MemberID, BookID, DueDate, Status)
+                        VALUES (?, ?, ?, ?)
+                        """
+                        cursor.execute(query, (member_id, book_id, due_date, status))
+                        
+                        # Update book quantity if the status is "Issued"
+                        if status == "Issued":
+                            cursor.execute("UPDATE Books SET Quantity = Quantity - 1 WHERE BookID = ?", (book_id,))
+                        
+                        conn.commit()
+                        st.success("Transaction added successfully!")
+                except Exception as e:
+                    st.error(f"Error adding transaction: {e}")
+                finally:
+                    conn.close()
+    else:
+        st.error("You do not have permission to perform this action.")
+
 # View All Books (All roles)
 def view_books():
     st.title("View Books")
@@ -426,7 +481,7 @@ def main():
             ],
             "Librarian": [
                 "Add Book", "View Books", "Update Book", "Export to CSV",
-                "Issue Book", "View Transactions", "Return Book"
+                "Issue Book", "View Transactions", "Return Book", "Add Transaction"
             ],
             "Member": [
                 "View Books", "Borrow Book", "Return Book"
@@ -484,6 +539,8 @@ def main():
             add_member()
         elif option == "View Members":  # New option
             view_members()
+        elif option == "Add Transaction":
+            add_transaction()
 
 # Run the app
 if __name__ == "__main__":
